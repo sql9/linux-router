@@ -707,7 +707,7 @@ _cleanup() {
             iptables -w -t nat -D POSTROUTING -s ${GATEWAY%.*}.0/24 ! -o ${WIFI_IFACE} -j MASQUERADE
             iptables -w -D FORWARD -i ${WIFI_IFACE} -s ${GATEWAY%.*}.0/24 -j ACCEPT
             iptables -w -D FORWARD -i ${INTERNET_IFACE} -d ${GATEWAY%.*}.0/24 -j ACCEPT
-       
+        fi
     fi
 
     
@@ -1589,7 +1589,7 @@ if [[ "$SHARE_METHOD" != "none" ]]; then
         # to enable clients to establish PPTP connections we must
         # load nf_nat_pptp module
         modprobe nf_nat_pptp > /dev/null 2>&1
-    
+    fi
 else
     echo "No Internet sharing"
 fi
@@ -1656,10 +1656,3 @@ if ! wait $HOSTAPD_PID; then
 fi
 
 clean_exit
-
-# Local Variables:
-# tab-width: 4
-# indent-tabs-mode: nil
-# End:
-
-# vim: et sts=4 sw=4
