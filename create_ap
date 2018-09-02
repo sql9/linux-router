@@ -705,21 +705,6 @@ _cleanup() {
 
         rm -rf $COMMON_CONFDIR
     fi
-
-    if [[ "$SHARE_METHOD" != "none" ]]; then
-        if [[ "$SHARE_METHOD" == "nat" ]]; then
-            stop_nat
-        fi
-    fi
-
-    
-    if [[ $NO_DNS -eq 0 ]]; then
-        stop_dns
-    fi
-    
-    if [[ $NO_DNSMASQ -eq 0 ]]; then
-        stop_dhcp
-    fi
     
     ip link set down dev ${AP_IFACE}
     ip addr flush ${AP_IFACE}
@@ -738,9 +723,27 @@ _cleanup() {
     cleanup_lock
 }
 
+clean_iptables() {
+    if [[ "$SHARE_METHOD" != "none" ]]; then
+        if [[ "$SHARE_METHOD" == "nat" ]]; then
+            stop_nat
+        fi
+    fi
+
+    
+    if [[ $NO_DNS -eq 0 ]]; then
+        stop_dns
+    fi
+    
+    if [[ $NO_DNSMASQ -eq 0 ]]; then
+        stop_dhcp
+    fi
+}
+
 cleanup() {
     echo
     echo -n "Doing cleanup.. "
+    clean_iptables
     _cleanup > /dev/null 2>&1
     echo "done"
 }
