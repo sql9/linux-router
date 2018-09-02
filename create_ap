@@ -624,6 +624,8 @@ OLD_MACADDR=
 IP_ADDRS=
 ROUTE_ADDRS=
 
+SUBNET_IFACE=
+
 HAVEGED_WATCHDOG_PID=
 
 _cleanup() {
@@ -672,22 +674,22 @@ _cleanup() {
 
     if [[ "$SHARE_METHOD" != "none" ]]; then
         if [[ "$SHARE_METHOD" == "nat" ]]; then
-            iptables -w -t nat -D POSTROUTING -s ${GATEWAY%.*}.0/24 ! -o ${WIFI_IFACE} -j MASQUERADE
-            iptables -w -D FORWARD -i ${WIFI_IFACE} -s ${GATEWAY%.*}.0/24 -j ACCEPT
+            iptables -w -t nat -D POSTROUTING -s ${GATEWAY%.*}.0/24 ! -o ${SUBNET_IFACE} -j MASQUERADE
+            iptables -w -D FORWARD -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -j ACCEPT
             iptables -w -D FORWARD -d ${GATEWAY%.*}.0/24 -j ACCEPT
         fi
     fi
 
     
     if [[ $NO_DNS -eq 0 ]]; then
-        iptables -w -D INPUT -i ${WIFI_IFACE} -p tcp -m tcp --dport $DNS_PORT -j ACCEPT
-        iptables -w -D INPUT -i ${WIFI_IFACE} -p udp -m udp --dport $DNS_PORT -j ACCEPT
+        iptables -w -D INPUT -i ${SUBNET_IFACE} -p tcp -m tcp --dport $DNS_PORT -j ACCEPT
+        iptables -w -D INPUT -i ${SUBNET_IFACE} -p udp -m udp --dport $DNS_PORT -j ACCEPT
         iptables -w -t nat -D PREROUTING -s ${GATEWAY%.*}.0/24 -d ${GATEWAY} \
             -p tcp -m tcp --dport 53 -j REDIRECT --to-ports $DNS_PORT
         iptables -w -t nat -D PREROUTING -s ${GATEWAY%.*}.0/24 -d ${GATEWAY} \
             -p udp -m udp --dport 53 -j REDIRECT --to-ports $DNS_PORT
     fi
-    iptables -w -D INPUT -i ${WIFI_IFACE} -p udp -m udp --dport 67 -j ACCEPT
+    iptables -w -D INPUT -i ${SUBNET_IFACE} -p udp -m udp --dport 67 -j ACCEPT
     
 
     if [[ $NO_VIRT -eq 0 ]]; then
@@ -1448,13 +1450,13 @@ fi
 ip link set up dev ${WIFI_IFACE} || die "$VIRTDIEMSG"
 ip addr add ${GATEWAY}/24 broadcast ${GATEWAY%.*}.255 dev ${WIFI_IFACE} || die "$VIRTDIEMSG"
 
-
+SUBNET_IFACE=${VWIFI_IFACE}
 # enable Internet sharing
 if [[ "$SHARE_METHOD" != "none" ]]; then
     echo "Sharing Internet using method: $SHARE_METHOD"
     if [[ "$SHARE_METHOD" == "nat" ]]; then
-        iptables -w -v -t nat -I POSTROUTING -s ${GATEWAY%.*}.0/24 ! -o ${WIFI_IFACE} -j MASQUERADE || die
-        iptables -w -v -I FORWARD -i ${WIFI_IFACE} -s ${GATEWAY%.*}.0/24 -j ACCEPT || die
+        iptables -w -v -t nat -I POSTROUTING -s ${GATEWAY%.*}.0/24 ! -o ${SUBNET_IFACE} -j MASQUERADE || die
+        iptables -w -v -I FORWARD -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -j ACCEPT || die
         iptables -w -v -I FORWARD -d ${GATEWAY%.*}.0/24 -j ACCEPT || die
         echo 1 > /proc/sys/net/ipv4/ip_forward || die
         # to enable clients to establish PPTP connections we must
@@ -1469,8 +1471,8 @@ fi
 
 if [[ $NO_DNS -eq 0 ]]; then
     DNS_PORT=5353
-    iptables -w -v -I INPUT -i ${WIFI_IFACE} -p tcp -m tcp --dport $DNS_PORT -j ACCEPT || die
-    iptables -w -v -I INPUT -i ${WIFI_IFACE} -p udp -m udp --dport $DNS_PORT -j ACCEPT || die
+    iptables -w -v -I INPUT -i ${SUBNET_IFACE} -p tcp -m tcp --dport $DNS_PORT -j ACCEPT || die
+    iptables -w -v -I INPUT -i ${SUBNET_IFACE} -p udp -m udp --dport $DNS_PORT -j ACCEPT || die
     iptables -w -v -t nat -I PREROUTING -s ${GATEWAY%.*}.0/24 -d ${GATEWAY} \
         -p tcp -m tcp --dport 53 -j REDIRECT --to-ports $DNS_PORT || die
     iptables -w -v -t nat -I PREROUTING -s ${GATEWAY%.*}.0/24 -d ${GATEWAY} \
@@ -1480,7 +1482,7 @@ else
 fi
 
 if [[ $NO_DNSMASQ -eq 0 ]]; then
-    iptables -w -v -I INPUT -i ${WIFI_IFACE} -p udp -m udp --dport 67 -j ACCEPT || die
+    iptables -w -v -I INPUT -i ${SUBNET_IFACE} -p udp -m udp --dport 67 -j ACCEPT || die
 
     if which complain > /dev/null 2>&1; then
         # openSUSE's apparmor does not allow dnsmasq to read files.
