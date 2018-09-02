@@ -1404,6 +1404,8 @@ wpa_key_mgmt=WPA-PSK
 wpa_pairwise=TKIP CCMP
 rsn_pairwise=CCMP
 EOF
+else
+    echo "Warning: Wifi is not protected by password" >&2
 fi
 
 if [[ $NO_DNSMASQ -eq 0 ]]; then
