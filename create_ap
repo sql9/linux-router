@@ -65,8 +65,6 @@ usage() {
     echo "                          For an <id> you can put the PID of create_ap or the WiFi interface."
     echo "                          If virtual WiFi interface was created, then use that one."
     echo "                          You can get them with --list-running"
-    echo
-    echo "Non-Bridging Options:"
     echo "  --no-dns                Disable dnsmasq DNS server"
     echo "  --no-dnsmasq            Disable dnsmasq server completely"
     echo "  -g <gateway>            IPv4 Gateway for the Access Point (default: 192.168.18.1)"
