@@ -1206,6 +1206,10 @@ if [[ $TP_DNS_PORT ]]; then
     dnsmasq_NO_DNS=1
 fi
 
+if [[ $SHARE_METHOD == 'none' ]]; then
+    dnsmasq_NO_DNS=1
+fi
+
 if [[ $LIST_RUNNING -eq 1 ]]; then
     echo -e "List of running $PROGNAME instances:\n"
     list_running
