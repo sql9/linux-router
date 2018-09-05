@@ -102,6 +102,7 @@ usage() {
     echo "  "$PROGNAME" --driver rtl871xdrv --ap wlan0 MyAccessPoint --password MyPassPhrase"
     echo "  "$PROGNAME" --daemon --ap wlan0 MyAccessPoint --password MyPassPhrase"
     echo "  "$PROGNAME" --stop wlan0"
+    echo "  "$PROGNAME" --ap wlan0 MyAccessPoint --password MyPassPhrase --tp <transparent-proxy> --dns-proxy <dns-proxy>"
 }
 
 if [[ "$1" == "" ]]; then
