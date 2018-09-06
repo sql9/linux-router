@@ -377,14 +377,14 @@ get_avail_fd() {
 }
 
 # lock file for the mutex counter
-COUNTER_LOCK_FILE=/tmp/create_ap.$$.lock
+COUNTER_LOCK_FILE=/tmp/lnxrouter.$$.lock
 
 cleanup_lock() {
     rm -f $COUNTER_LOCK_FILE
 }
 
 init_lock() {
-    local LOCK_FILE=/tmp/create_ap.all.lock
+    local LOCK_FILE=/tmp/lnxrouter.all.lock
 
     # we initialize only once
     [[ $LOCK_FD -ne 0 ]] && return 0
@@ -410,7 +410,7 @@ init_lock() {
     return $?
 }
 
-# recursive mutex lock for all create_ap processes
+# recursive mutex lock for all lnxrouter processes
 mutex_lock() {
     local counter_mutex_fd
     local counter
@@ -436,7 +436,7 @@ mutex_lock() {
     return 0
 }
 
-# recursive mutex unlock for all create_ap processes
+# recursive mutex unlock for all lnxrouter processes
 mutex_unlock() {
     local counter_mutex_fd
     local counter
@@ -957,7 +957,7 @@ _cleanup() {
     rm -rf $CONFDIR
 
 
-    # if we are the last create_ap instance then set back the common values
+    # if we are the last lnxrouter instance then set back the common values
     if ! has_running_instance; then
         # kill common processes
         for x in $COMMON_CONFDIR/*.pid; do
@@ -1047,7 +1047,7 @@ clean_exit() {
 list_running_conf() {
     local x
     mutex_lock
-    for x in /tmp/create_ap.*; do
+    for x in /tmp/lnxrouter.*; do
         if [[ -f $x/pid && -f $x/wifi_iface && -d /proc/$(cat $x/pid) ]]; then
             echo $x
         fi
@@ -1151,7 +1151,7 @@ has_running_instance() {
     local PID x
 
     mutex_lock
-    for x in /tmp/create_ap.*; do
+    for x in /tmp/lnxrouter.*; do
         if [[ -f $x/pid ]]; then
             PID=$(cat $x/pid)
             if [[ -d /proc/$PID ]]; then
@@ -1243,7 +1243,7 @@ fi
 
 if [[ $DAEMONIZE -eq 1 && $RUNNING_AS_DAEMON -eq 0 ]]; then
     echo "Running as Daemon..."
-    # run a detached create_ap
+    # run a detached lnxrouter
     RUNNING_AS_DAEMON=1 setsid "$0" "${ARGS[@]}" &
     exit 0
 fi
@@ -1351,7 +1351,7 @@ fi
 
 mutex_lock
 trap "cleanup" EXIT
-CONFDIR=$(mktemp -d /tmp/create_ap.${WIFI_IFACE}.conf.XXXXXXXX)
+CONFDIR=$(mktemp -d /tmp/lnxrouter.${WIFI_IFACE}.conf.XXXXXXXX)
 echo "Config dir: $CONFDIR"
 echo "PID: $$"
 echo $$ > $CONFDIR/pid
@@ -1361,7 +1361,7 @@ echo $$ > $CONFDIR/pid
 chmod 755 $CONFDIR
 chmod 444 $CONFDIR/pid
 
-COMMON_CONFDIR=/tmp/create_ap.common.conf
+COMMON_CONFDIR=/tmp/lnxrouter.common.conf
 mkdir -p $COMMON_CONFDIR
 
 cp -n /proc/sys/net/ipv4/ip_forward $COMMON_CONFDIR
