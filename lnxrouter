@@ -958,6 +958,7 @@ _cleanup() {
 
     # if we are the last lnxrouter instance then set back the common values
     if ! has_running_instance; then
+        echo "Exiting: This is the only running instance"
         # kill common processes
         for x in $COMMON_CONFDIR/*.pid; do
             [[ -f $x ]] && kill -9 $(cat $x)
@@ -965,6 +966,7 @@ _cleanup() {
 
         # set old ip_forward
         if [[ -f $COMMON_CONFDIR/ip_forward ]]; then
+            echo Set to old value: /proc/sys/net/ipv4/ip_forward=$(cat $COMMON_CONFDIR/ip_forward)
             cp -f $COMMON_CONFDIR/ip_forward /proc/sys/net/ipv4
             rm -f $COMMON_CONFDIR/ip_forward
         fi
@@ -978,6 +980,8 @@ _cleanup() {
         fi
 
         rm -rf $COMMON_CONFDIR
+    else
+        echo "Exiting: This is NOT the only running instance"
     fi
     
     ip link set down dev ${AP_IFACE}
@@ -1024,7 +1028,7 @@ cleanup() {
     echo
     echo -n "Doing cleanup.. "
     clean_iptables
-    _cleanup > /dev/null 2>&1
+    _cleanup 2> /dev/null
     echo "done"
 }
 
