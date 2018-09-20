@@ -971,13 +971,6 @@ _cleanup() {
             rm -f $COMMON_CONFDIR/ip_forward
         fi
 
-        # set old bridge-nf-call-iptables
-        if [[ -f $COMMON_CONFDIR/bridge-nf-call-iptables ]]; then
-            if [[ -e /proc/sys/net/bridge/bridge-nf-call-iptables ]]; then
-                cp -f $COMMON_CONFDIR/bridge-nf-call-iptables /proc/sys/net/bridge
-            fi
-            rm -f $COMMON_CONFDIR/bridge-nf-call-iptables
-        fi
 
         rm -rf $COMMON_CONFDIR
     else
@@ -1385,9 +1378,7 @@ COMMON_CONFDIR=/tmp/lnxrouter.common.conf
 mkdir -p $COMMON_CONFDIR
 
 cp -n /proc/sys/net/ipv4/ip_forward $COMMON_CONFDIR
-if [[ -e /proc/sys/net/bridge/bridge-nf-call-iptables ]]; then
-    cp -n /proc/sys/net/bridge/bridge-nf-call-iptables $COMMON_CONFDIR
-fi
+
 mutex_unlock
 
 
