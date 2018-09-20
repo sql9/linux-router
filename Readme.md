@@ -8,10 +8,15 @@
 - Share Internet via NAT
 - DHCP server
 - DNS server and query log
-- Creating Wifi hotspot
 - Transparent proxy (redsocks)
 
+Creating Wifi hotspot:
 
+- Channel selecting
+- Choose encryptions: WPA, WPA2, WPA/WPA2, Open
+- Hide your SSID.
+- IEEE 802.11n & 802.11ac support
+- Create an AP with the same interface you are getting Internet (require same channel)
 
 
 Useful in these situations:
@@ -21,9 +26,8 @@ Internet ----(eth0/wlan0)- Linux-(wlanX)(AP)
                                         |----client
                                         |
                                         |----client
-
 ```
-(one wlan card can be at the same time used for both Internet and AP, require same channel)
+
 ```
                                     Internet
 Wifi AP(no DHCP)                        |
@@ -66,11 +70,19 @@ Internet ----(eth0/wlan0)-Linux-(virtual interface)-----VM guests/container gues
 # lnxrouter -i eth1
 ```
 
-### Create Wifi AP and NAT Internet
-
+### Create Wifi hotspot
 
 ```
 # lnxrouter --ap wlan0 MyAccessPoint --password MyPassPhrase
+```
+
+### Make a LAN without Internet
+
+```
+# lnxrouter -i eth1 -n
+```
+```
+# lnxrouter --ap wlan0 MyAccessPoint --password MyPassPhrase -n
 ```
 
 ### Transparent proxy with tor
@@ -85,7 +97,7 @@ In `torrc`
 TransPort 0.0.0.0:9040 
 DNSPort 0.0.0.0:9053
 ```
-### CLI usage
+### CLI usage and other features
 
 ```
 Usage: lnxrouter [options] 
@@ -135,9 +147,6 @@ Options:
   --ht_capab <HT>         HT capabilities (default: [HT40+])
   --vht_capab <VHT>       VHT capabilities
   --no-haveged            Do not run 'haveged' automatically when needed
-  --fix-unmanaged         If NetworkManager shows your interface as unmanaged after you
-                          close lnxrouter, then use this option to switch your interface
-                          back to managed
 
  Instance managing:
   --daemon                Run lnxrouter in the background
@@ -149,11 +158,33 @@ Options:
                           For an <id> you can put the PID of lnxrouter or interface.
                           If virtual WiFi interface was created, then use that one.
                           You can get them with --list-running
+
+ Tools: 
+  --fix-unmanaged         If NetworkManager shows your interface as unmanaged after you
+                          close lnxrouter, then use this option to switch your interface
+                          back to managed
 ```
 
 
-## TODO
+### Ddependencies
+- bash
+- procps or procps-ng
+- iproute2
+- dnsmasq
+- iptables
 
+Wifi hotspot:
+
+- hostapd
+- iw
+- iwconfig (you only need this if 'iw' can not recognize your adapter)
+- haveged (optional)
+
+## TODO
 
 - Ban private network access
 - IPv6 support 
+
+## Thanks
+
+Thank the upstream project [create_ap](https://github.com/oblique/create_ap). It brings many Wifi features

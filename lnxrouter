@@ -82,9 +82,6 @@ usage() {
     echo "  --ht_capab <HT>         HT capabilities (default: [HT40+])"
     echo "  --vht_capab <VHT>       VHT capabilities"
     echo "  --no-haveged            Do not run 'haveged' automatically when needed"
-    echo "  --fix-unmanaged         If NetworkManager shows your interface as unmanaged after you"
-    echo "                          close lnxrouter, then use this option to switch your interface"
-    echo "                          back to managed"
     echo
     echo " Instance managing:"
     echo "  --daemon                Run lnxrouter in the background"
@@ -96,6 +93,11 @@ usage() {
     echo "                          For an <id> you can put the PID of lnxrouter or interface."
     echo "                          If virtual WiFi interface was created, then use that one."
     echo "                          You can get them with --list-running"
+    echo
+    echo " Tools:"
+    echo "  --fix-unmanaged         If NetworkManager shows your interface as unmanaged after you"
+    echo "                          close lnxrouter, then use this option to switch your interface"
+    echo "                          back to managed"
 
     echo
     echo
