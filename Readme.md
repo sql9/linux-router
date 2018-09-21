@@ -33,7 +33,7 @@ Internet ----(eth0/wlan0)- Linux-(wlanX)(AP)
 Wifi AP(no DHCP)                        |
     |                                   |
     |----(wlan1)-Linux-(eth0/wlan0)------
-    |			(DHCP)
+    |           (DHCP)
     |
     |----client
     |
@@ -184,6 +184,7 @@ Wifi hotspot:
 
 - Ban private network access
 - IPv6 support 
+- Random MAC, IP, SSID, password
 
 ## Thanks
 
