@@ -7,16 +7,18 @@
 
 - Share Internet via NAT
 - DHCP server
-- DNS server and query log
+- DNS server 
+- DNS query log
 - Transparent proxy (redsocks)
+- Set DNS proxy
 
 Creating Wifi hotspot:
 
 - Channel selecting
-- Choose encryptions: WPA, WPA2, WPA/WPA2, Open
-- Hide your SSID.
+- Choose encryptions: WPA, WPA2, WPA/WPA2, No encryption
+- Hide  SSID
 - IEEE 802.11n & 802.11ac support
-- Create an AP with the same interface you are getting Internet (require same channel)
+- Create AP on the same interface you are getting Internet (require same channel)
 
 
 Useful in these situations:
@@ -106,8 +108,8 @@ Options:
   -h, --help              Show this help
   --version               Print version number
 
-  -i <interface>          Interface to share Internet or create subnet.
-                          Don't use this if want to create Wifi hotspot
+  -i <interface>          Interface to share Internet to. An NATed subnet will be made on it.
+                          To create Wifi hotspot use --ap instead
   -n                      Disable Internet sharing
   --tp <port>             Transparent proxy (redsocks), redirect tcp and udp traffic to port.
                           Usually use with --dns-proxy
