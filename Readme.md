@@ -99,6 +99,21 @@ In `torrc`
 TransPort 0.0.0.0:9040 
 DNSPort 0.0.0.0:9053
 ```
+### Using with LXC
+Create a bridge
+```
+# brctl addbr lxcbr1
+```
+In LXC container's `config`
+```
+lxc.network.type = veth
+lxc.network.flags = up
+lxc.network.link = lxcbr1
+lxc.network.hwaddr = xx:xx:xx:xx:xx:xx
+```
+```
+# lnxrouter -i lxcbr1
+```
 ### CLI usage and other features
 
 ```
