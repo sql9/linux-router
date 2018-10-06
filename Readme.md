@@ -114,6 +114,11 @@ lxc.network.hwaddr = xx:xx:xx:xx:xx:xx
 ```
 # lnxrouter -i lxcbr1
 ```
+### Using with VirtualBox
+On VirtualBox's global settings, create a host-only network `vboxnet1` with DHCP disabled.
+```
+# lnxrouter -i vboxnet1
+```
 ### CLI usage and other features
 
 ```
