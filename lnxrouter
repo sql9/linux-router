@@ -27,7 +27,8 @@ umask $SCRIPT_UMASK
 
 usage() {
     echo "$PROGNAME $VERSION (https://github.com/garywill/linux-router)"
-    echo "$PROGNAME is a fork of create_ap(https://github.com/oblique/create_ap)"
+    echo "Share your Linux's Internet access to other devices. "
+    echo "Work on wired, wireless and virtual networks."
     echo 
     echo "Usage: "$PROGNAME" [options] "
     echo

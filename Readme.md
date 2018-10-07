@@ -1,16 +1,17 @@
 #  Linux-router
 
- Share your Linux's Internet access to other devices.
- This is a fork of [create_ap](https://github.com/oblique/create_ap).
+Share your Linux's Internet access to other devices. Work on wired, wireless and virtual networks.
+
  
 ##  Features
 
-- Share Internet via NAT
+- Create a NATed sub-network
+- Share Internet to the sub-network
 - DHCP server
 - DNS server 
-- DNS query log
+- Log DNS queries
 - Transparent proxy (redsocks)
-- Set DNS proxy
+- DNS proxy
 
 Creating Wifi hotspot:
 
@@ -210,4 +211,4 @@ Wifi hotspot:
 
 ## Thanks
 
-Thank the upstream project [create_ap](https://github.com/oblique/create_ap). It brings many Wifi features
+Thank project [create_ap](https://github.com/oblique/create_ap). It brings many Wifi features.
