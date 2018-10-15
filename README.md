@@ -20,49 +20,38 @@ Creating Wifi hotspot:
 - Hidden SSID
 - Create AP on the same interface you are getting Internet (require same channel)
 
-For many other features, see below CLI usage.
+**For many other features, see below [CLI usage](#cli-usage-and-other-features)**
 
-Useful in these situations:
+### Useful in these situations
 ```
-Internet ----(eth0/wlan0)-Linux-(wlanX)AP
-                                        |
-                                        |----client
-                                        |
-                                        |----client
+Internet----(eth0/wlan0)-Linux-(wlanX)AP
+                                       |--client
+                                       |--client
 ```
 
 ```
                                     Internet
 Wifi AP(no DHCP)                        |
-    |                                   |
     |----(wlan1)-Linux-(eth0/wlan0)------
     |           (DHCP)
-    |
-    |----client
-    |
-    |----client
+    |--client
+    |--client
 ```
-
-
 
 ```
                                     Internet
  Switch                                 |
-    |                                   |
     |---(eth1)-Linux-(eth0/wlan0)--------
-    |
-    |----client
-    |
-    |----client
+    |--client
+    |--client
 ```
 
 ```
-Internet ----(eth0/wlan0)-Linux-(eth1)--------Another PC
+Internet----(eth0/wlan0)-Linux-(eth1)------Another PC
 ```
 
-
 ```
-Internet ----(eth0/wlan0)-Linux-(virtual interface)-----VM guests/container guests
+Internet----(eth0/wlan0)-Linux-(virtual interface)-----VM guests/container guests
 ```
  
 ## Usage
@@ -189,7 +178,7 @@ Options:
 ```
 
 
-### Ddependencies
+## Dependencies
 - bash
 - procps or procps-ng
 - iproute2
