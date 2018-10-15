@@ -1,30 +1,30 @@
 #  Linux-router
 
-Share your Linux's Internet access to other devices. Work on wired, wireless and virtual networks.
+Share your Linux's Internet access to other devices. Works on wired, wireless and virtual networks.
 
  
 ##  Features
+
+Basic features:
 
 - Create a NATed sub-network
 - Share Internet to the sub-network
 - DHCP server
 - DNS server 
-- Log DNS queries
-- Transparent proxy (redsocks)
-- DNS proxy
+- Transparent proxy (redsocks) (with DNS proxy)
 
 Creating Wifi hotspot:
 
 - Channel selecting
-- Choose encryptions: WPA, WPA2, WPA/WPA2, No encryption
-- Hide  SSID
-- IEEE 802.11n & 802.11ac support
+- Choose encryptions: WPA2/WPA, WPA2, WPA, No encryption
+- Hidden SSID
 - Create AP on the same interface you are getting Internet (require same channel)
 
+For many other features, see below CLI usage.
 
 Useful in these situations:
 ```
-Internet ----(eth0/wlan0)- Linux-(wlanX)(AP)
+Internet ----(eth0/wlan0)-Linux-(wlanX)AP
                                         |
                                         |----client
                                         |
@@ -205,10 +205,10 @@ Wifi hotspot:
 
 ## TODO
 
-- Ban private network access
+- Option to ban private network access
 - IPv6 support 
-- Random MAC, IP, SSID, password
+- Option to random MAC, IP, SSID, password
 
 ## Thanks
 
-Thank project [create_ap](https://github.com/oblique/create_ap). It brings many Wifi features.
+Many thanks to project [create_ap](https://github.com/oblique/create_ap).
