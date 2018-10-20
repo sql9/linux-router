@@ -883,12 +883,12 @@ iptables_()
 start_nat() {
     echo
     echo "iptables: NAT "
-    iptables_ -v -t nat -I POSTROUTING -s ${GATEWAY%.*}.0/24  -j MASQUERADE || die
+    iptables_ -v -t nat -I POSTROUTING -s ${GATEWAY%.*}.0/24 ! -d ${GATEWAY%.*}.0/24 ! -o ${SUBNET_IFACE} -j MASQUERADE || die
     iptables_ -v -I FORWARD -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -j ACCEPT || die
     iptables_ -v -I FORWARD -o ${SUBNET_IFACE} -d ${GATEWAY%.*}.0/24 -j ACCEPT || die
 }
 stop_nat() {
-    iptables_ -t nat -D POSTROUTING -s ${GATEWAY%.*}.0/24  -j MASQUERADE
+    iptables_ -t nat -D POSTROUTING -s ${GATEWAY%.*}.0/24 ! -d ${GATEWAY%.*}.0/24 ! -o ${SUBNET_IFACE} -j MASQUERADE
     iptables_ -D FORWARD -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -j ACCEPT
     iptables_ -D FORWARD -o ${SUBNET_IFACE} -d ${GATEWAY%.*}.0/24 -j ACCEPT
 }
