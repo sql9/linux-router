@@ -1690,8 +1690,8 @@ if [[ $NO_DNSMASQ -eq 0 ]]; then
     dnsmasq -C $CONFDIR/dnsmasq.conf -x $CONFDIR/dnsmasq.pid -l $CONFDIR/dnsmasq.leases || die & 
     while [[ ! -f $CONFDIR/dnsmasq.pid ]]; do
         sleep 1
-        echo -n "dnsmasq PID: " ; cat $CONFDIR/dnsmasq.pid
     done
+    echo -n "dnsmasq PID: " ; cat $CONFDIR/dnsmasq.pid
     umask $SCRIPT_UMASK
 
 fi
@@ -1717,12 +1717,12 @@ if [[ $WIFI_IFACE ]]; then
     $STDBUF_PATH hostapd $HOSTAPD_DEBUG_ARGS -B $CONFDIR/hostapd.conf -P $CONFDIR/hostapd.pid || die &
     while [[ ! -f $CONFDIR/hostapd.pid ]]; do
         sleep 1
-        echo -n "hostapd PID: " ; cat $CONFDIR/hostapd.pid
     done
     
     #HOSTAPD_PID=$!
     #echo $HOSTAPD_PID > $CONFDIR/hostapd.pid
     
+    echo -n "hostapd PID: " ; cat $CONFDIR/hostapd.pid
 
 
 fi
