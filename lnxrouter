@@ -132,7 +132,6 @@ NO_VIRT=0
 COUNTRY=
 FREQ_BAND=2.4
 NO_HAVEGED=0
-HAVEGED_WATCHDOG_PID=
 HOSTAPD_DEBUG_ARGS=
 USE_PSK=0
 FIX_UNMANAGED=0
@@ -355,7 +354,7 @@ done
 # on error it echos 0
 get_avail_fd() {
     local x
-    for x in $(seq 1 $(ulimit -n)); do
+    for x in $(seq 10 $(ulimit -n)); do
         if [[ ! -a "/proc/$BASHPID/fd/$x" ]]; then
             echo $x
             return
@@ -687,7 +686,7 @@ haveged_watchdog() {
             fi
         fi
         mutex_unlock
-        sleep 2
+        sleep 5
     done
 }
 
@@ -878,6 +877,7 @@ start_nat() {
     iptables_ -v -I FORWARD -o ${SUBNET_IFACE} -d ${GATEWAY%.*}.0/24 -j ACCEPT || die
 }
 stop_nat() {
+    echo "iptables: stop NAT"
     iptables_ -t nat -D POSTROUTING -s ${GATEWAY%.*}.0/24 ! -d ${GATEWAY%.*}.0/24 ! -o ${SUBNET_IFACE} -j MASQUERADE
     iptables_ -D FORWARD -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -j ACCEPT
     iptables_ -D FORWARD -o ${SUBNET_IFACE} -d ${GATEWAY%.*}.0/24 -j ACCEPT
@@ -890,6 +890,7 @@ allow_dns_port() {
     iptables_ -v -I INPUT -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -d ${GATEWAY} -p udp -m udp --dport 53 -j ACCEPT || die
 }
 unallow_dns_port() {
+    echo "iptables: stop allowing DNS"
     iptables_ -D INPUT -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -d ${GATEWAY} -p tcp -m tcp --dport 53 -j ACCEPT
     iptables_ -D INPUT -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -d ${GATEWAY}  -p udp -m udp --dport 53 -j ACCEPT
 }
@@ -900,6 +901,7 @@ start_dhcp() {
     iptables_ -v -I INPUT -i ${SUBNET_IFACE} -p udp -m udp --dport 67 -j ACCEPT || die
 }
 stop_dhcp() {
+    echo "iptables: stop dhcp"
     iptables_ -D INPUT -i ${SUBNET_IFACE} -p udp -m udp --dport 67 -j ACCEPT
 }
 
@@ -914,6 +916,7 @@ redirect_dns() {
     iptables_ -v -t nat -I PREROUTING -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -d ${GATEWAY} -p udp -m udp --dport 53 -j REDIRECT --to-ports ${TP_DNS_PORT} || die
 }
 unredirect_dns() {
+    echo "iptables: stop dns proxy "
     iptables_ -D INPUT -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -d ${GATEWAY} -p tcp -m tcp --dport ${TP_DNS_PORT} -j ACCEPT
     iptables_ -D INPUT -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -d ${GATEWAY} -p udp -m udp --dport ${TP_DNS_PORT} -j ACCEPT
 
@@ -941,6 +944,7 @@ start_redsocks() {
     iptables_ -v -I INPUT -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -p udp -m udp --dport ${TP_PORT}  -j ACCEPT || die
 }
 stop_redsocks() {
+    echo "iptables: stop transparent proxy"
     iptables_ -t nat -D PREROUTING -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24  -j REDSOCKS-${SUBNET_IFACE}
     iptables_ -t nat -F REDSOCKS-${SUBNET_IFACE}
     iptables_ -t nat -X REDSOCKS-${SUBNET_IFACE}
@@ -949,32 +953,48 @@ stop_redsocks() {
     iptables_ -D INPUT -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -p udp -m udp --dport ${TP_PORT}  -j ACCEPT
 }
 
-_cleanup() {
-    local PID x
-
-    trap "" SIGINT SIGUSR1 SIGUSR2 EXIT SIGTERM
-    mutex_lock
-    #disown -a
-
-    # kill haveged_watchdog
-    [[ -n "$HAVEGED_WATCHDOG_PID" ]] && kill $HAVEGED_WATCHDOG_PID
-
-    # kill processes
+kill_processes() {
+    #echo "Killing processes"
+    local x  pid
     for x in $CONFDIR/*.pid; do
         # even if the $CONFDIR is empty, the for loop will assign
         # a value in $x. so we need to check if the value is a file
-        [[ -f $x ]] && kill  $(cat $x)
+        if [[ -f $x ]] &&  sleep 0.3  && [[ -f $x ]]; then
+            pid=$(cat $x)
+            pn=$( ps -p $pid -o comm= ) 
+            #echo "Killing $pid $pn ... "
+            kill $pid 2>/dev/null && ( echo "Killed $pid $pn" && rm $x ) || echo "Failed to kill $pid $pn, it may have exited"
+        fi
     done
+    
+}
+_cleanup() {
+    local PID x
+
+    mutex_lock
+    #disown -a
 
     rm -rf $CONFDIR
 
+    ip addr flush ${SUBNET_IFACE}
+    if [[ $WIFI_IFACE && $NO_VIRT -eq 0 ]]; then
+        ip link set down dev ${AP_IFACE}
+        networkmanager_rm_unmanaged_if_needed ${VWIFI_IFACE} ${OLD_MACADDR}
+        iw dev ${VWIFI_IFACE} del
+        dealloc_iface $VWIFI_IFACE
+    else
+        if [[ -n "$NEW_MACADDR" ]]; then
+            ip link set dev ${TARGET_IFACE} address ${OLD_MACADDR} && echo "Restore ${TARGET_IFACE} to old MAC address ${OLD_MACADDR}"
+        fi
+        networkmanager_rm_unmanaged_if_needed ${TARGET_IFACE} ${OLD_MACADDR}
+    fi
 
     # if we are the last lnxrouter instance then set back the common values
     if ! has_running_instance; then
         echo "Exiting: This is the only running instance"
         # kill common processes
         for x in $COMMON_CONFDIR/*.pid; do
-            [[ -f $x ]] && kill -9 $(cat $x)
+            [[ -f $x ]] && kill -9 $(cat $x) && rm $x
         done
 
         # set old ip_forward
@@ -992,19 +1012,6 @@ _cleanup() {
     fi
     
 
-    ip addr flush ${SUBNET_IFACE}
-    if [[ $WIFI_IFACE && $NO_VIRT -eq 0 ]]; then
-        ip link set down dev ${AP_IFACE}
-        networkmanager_rm_unmanaged_if_needed ${VWIFI_IFACE} ${OLD_MACADDR}
-        iw dev ${VWIFI_IFACE} del
-        dealloc_iface $VWIFI_IFACE
-    else
-        if [[ -n "$NEW_MACADDR" ]]; then
-            ip link set dev ${TARGET_IFACE} address ${OLD_MACADDR} && echo "Restore ${TARGET_IFACE} to old MAC address ${OLD_MACADDR}"
-        fi
-        networkmanager_rm_unmanaged_if_needed ${TARGET_IFACE} ${OLD_MACADDR}
-    fi
-
     mutex_unlock
     cleanup_lock
 }
@@ -1016,8 +1023,6 @@ clean_iptables() {
     elif [[ "$SHARE_METHOD" == "redsocks" ]]; then
         stop_redsocks
     fi
-
-
     
     if [[ "$DHCP_DNS" == "gateway" ]]; then
         unallow_dns_port
@@ -1033,28 +1038,33 @@ clean_iptables() {
 }
 
 cleanup() {
+    trap "" SIGINT SIGUSR1 SIGUSR2 EXIT SIGTERM
     echo
     echo
     echo "Doing cleanup.. "
-    clean_iptables
+    kill_processes
+    clean_iptables  2> /dev/null
     _cleanup 2> /dev/null
+    
+    pgid=$(ps opgid= $$ |awk '{print $1}' )
+    kill -15 -$pgid
+    sleep 1 
     echo "Cleaning up done"
+    kill -9 -$pgid
 }
 
-die() {
+die() { # SIGUSR2
+    echo "Error occured"
     [[ -n "$1" ]] && echo -e "\nERROR: $1\n" >&2
     # send die signal to the main process
-    [[ $BASHPID -ne $$ ]] && kill -USR2 $$
-    # we don't need to call cleanup because it's traped on EXIT
-    #cleanup
+    [[ $BASHPID -ne $$ ]] && kill -USR2 $$ || cleanup
     exit 1
 }
 
-clean_exit() {
+clean_exit() { # SIGUSR1
     echo "clean_exit()"
     # send clean_exit signal to the main process
-    [[ $BASHPID -ne $$ ]] && kill -USR1 $$
-    # we don't need to call cleanup because it's traped on EXIT
+    [[ $BASHPID -ne $$ ]] && kill -USR1 $$ || cleanup
     exit 0
 }
 
@@ -1396,7 +1406,7 @@ fi
 echo "Target interface is ${TARGET_IFACE}"
 
 mutex_lock
-#trap "cleanup" EXIT
+trap "cleanup" EXIT
 CONFDIR=$(mktemp -d $TMPDIR/lnxrouter.${TARGET_IFACE}.conf.XXXXXXXX)
 #echo "Config dir: $CONFDIR"
 echo "PID: $$"
@@ -1605,9 +1615,11 @@ except-interface=*
 no-dhcp-interface=lo
 dhcp-range=${GATEWAY%.*}.1,${GATEWAY%.*}.254,255.255.255.0,24h
 dhcp-option-force=option:router,${GATEWAY}
-log-dhcp
-log-facility=/dev/stdout
+#log-dhcp
+log-facility=/dev/null
 EOF
+# 'log-dhcp' show too much logs. Using '-d' in dnsmasq command shows a proper dhcp log
+# if use '-d', 'log-facility' should = /dev/null
     if [[ "$DHCP_DNS" != "no" ]]; then
         if [[ "$DHCP_DNS" == "gateway" ]]; then
             dns_offer="$GATEWAY"
@@ -1652,7 +1664,7 @@ if [[ "$SHARE_METHOD" == "none" ]]; then
     echo "No Internet sharing"
 elif [[ "$SHARE_METHOD" == "nat" ]]; then
     start_nat
-    echo 1 > /proc/sys/net/ipv4/ip_forward || die
+    echo 1 > /proc/sys/net/ipv4/ip_forward || die "Failed enabling system ipv4 forwarding"
     # to enable clients to establish PPTP connections we must
     # load nf_nat_pptp module
     modprobe nf_nat_pptp > /dev/null 2>&1
@@ -1687,12 +1699,19 @@ if [[ $NO_DNSMASQ -eq 0 ]]; then
     umask 0033
     echo 
     echo "Starting dnsmasq"
-    dnsmasq -C $CONFDIR/dnsmasq.conf -x $CONFDIR/dnsmasq.pid -l $CONFDIR/dnsmasq.leases || die & 
-    while [[ ! -f $CONFDIR/dnsmasq.pid ]]; do
-        sleep 1
-    done
-    echo -n "dnsmasq PID: " ; cat $CONFDIR/dnsmasq.pid
+    # dnsmasq '-x' works only when no '-d' (run in foreground)
+    # Using '-d' dnsmasq will not turn into 'nobody'
+    dnsmasq -d -C $CONFDIR/dnsmasq.conf -x $CONFDIR/dnsmasq.pid -l $CONFDIR/dnsmasq.leases & 
+    DNSMASQ_PID=$!
+    echo "dnsmasq PID: $DNSMASQ_PID"
+    #while [[ ! -f $CONFDIR/dnsmasq.pid ]]; do
+    #    sleep 1
+    #done
+    #echo -n "dnsmasq PID: " ; cat $CONFDIR/dnsmasq.pid
     umask $SCRIPT_UMASK
+    #(wait $DNSMASQ_PID ; die "dnsmasq failed") &
+    ( while [ -e /proc/$DNSMASQ_PID ]; do sleep 1; done ; die "dnsmasq exited" ) &
+    sleep 2
 
 fi
 
@@ -1702,6 +1721,7 @@ if [[ $WIFI_IFACE ]]; then
     if [[ $NO_HAVEGED -eq 0 ]]; then
         haveged_watchdog &
         HAVEGED_WATCHDOG_PID=$!
+        echo $HAVEGED_WATCHDOG_PID > $CONFDIR/haveged_watchdog.pid
         echo "haveged_watchdog PID: $HAVEGED_WATCHDOG_PID" 
     fi
 
@@ -1714,33 +1734,28 @@ if [[ $WIFI_IFACE ]]; then
     fi
     echo 
     echo "Starting hostapd"
-    # $STDBUF_PATH $HOSTAPD $HOSTAPD_DEBUG_ARGS -B -P $CONFDIR/hostapd.pid $CONFDIR/hostapd.conf || die &
-    $STDBUF_PATH $HOSTAPD $HOSTAPD_DEBUG_ARGS $CONFDIR/hostapd.conf &
+    # hostapd '-P' works only when use '-B' (run in background)
+    $STDBUF_PATH $HOSTAPD $HOSTAPD_DEBUG_ARGS -P $CONFDIR/hostapd.pid $CONFDIR/hostapd.conf  &
     HOSTAPD_PID=$!
     echo $HOSTAPD_PID > $CONFDIR/hostapd.pid
-
-    while [[ ! -f $CONFDIR/hostapd.pid ]]; do
-        sleep 1
-    done
-    echo -n "hostapd PID: " ; cat $CONFDIR/hostapd.pid
+    echo -n "hostapd PID: $HOSTAPD_PID"
+    #while [[ ! -f $CONFDIR/hostapd.pid ]]; do
+    #    sleep 1
+    #done
+    #echo -n "hostapd PID: " ; cat $CONFDIR/hostapd.pid
+    ( while [ -e /proc/$HOSTAPD_PID ]; do sleep 1; done ; die "hostapd exited" ) &
 
 
 fi
 
-KEEP_RUNNING_PID=
-keep_running() {
-    while :; do
-        sleep 9999
-    done 
-}
 
 sleep 2
 # need loop to keep this script running
-keep_running &
+bash -c "while :; do sleep 3 ; done " &
 KEEP_RUNNING_PID=$!
 echo $KEEP_RUNNING_PID > $CONFDIR/keep_running.pid
 
-#jobs
+#jobs -p
 
 wait $KEEP_RUNNING_PID
 
