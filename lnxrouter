@@ -5,9 +5,7 @@ PROGNAME="$(basename $0)"
 
 export LC_ALL=C
 
-# all new files and directories must be readable only by root.
-# in special cases we must use chmod to give any other permissions.
-SCRIPT_UMASK=0077
+SCRIPT_UMASK=0122
 umask $SCRIPT_UMASK
 
 usage() {
@@ -359,7 +357,7 @@ else
 fi
 mkdir -p $TMPDIR/lnxrouter_tmp
 TMPDIR=$TMPDIR/lnxrouter_tmp
-chmod 777 $TMPDIR 2>/dev/null
+chmod 755 $TMPDIR 2>/dev/null
 
 
 
@@ -1271,15 +1269,12 @@ fi
 echo "Target interface is ${TARGET_IFACE}"
 
 trap "cleanup" EXIT
-CONFDIR=$(mktemp -d $TMPDIR/lnxrouter.${TARGET_IFACE}.conf.XXXXXXXX)
+CONFDIR=$(mktemp -d $TMPDIR/lnxrouter.${TARGET_IFACE}.conf.XXX)
+chmod 755 $CONFDIR
 #echo "Config dir: $CONFDIR"
 echo "PID: $$"
 echo $$ > $CONFDIR/pid
 
-# to make --list-running work from any user, we must give read
-# permissions to $CONFDIR and $CONFDIR/pid
-chmod 755 $CONFDIR
-chmod 444 $CONFDIR/pid
 
 COMMON_CONFDIR=$TMPDIR/lnxrouter.common.conf
 mkdir -p $COMMON_CONFDIR
@@ -1353,7 +1348,6 @@ else
 fi
 
 echo $SUBNET_IFACE > $CONFDIR/subn_iface
-chmod 444 $CONFDIR/subn_iface
 
 if [[ $WIFI_IFACE ]]; then
 
@@ -1439,7 +1433,7 @@ EOF
     else
         echo "Warning: Wifi is not protected by password" >&2
     fi
-
+chmod 600 $CONFDIR/hostapd.conf
 fi
 
 #===================================================
@@ -1557,7 +1551,6 @@ if [[ $NO_DNSMASQ -eq 0 ]]; then
         complain dnsmasq
     fi
 
-    umask 0033
     echo 
     echo "Starting dnsmasq"
     # dnsmasq '-x' works only when no '-d' (run in foreground)
@@ -1569,7 +1562,6 @@ if [[ $NO_DNSMASQ -eq 0 ]]; then
     #    sleep 1
     #done
     #echo -n "dnsmasq PID: " ; cat $CONFDIR/dnsmasq.pid
-    umask $SCRIPT_UMASK
     #(wait $DNSMASQ_PID ; die "dnsmasq failed") &
     ( while [ -e /proc/$DNSMASQ_PID ]; do sleep 1; done ; die "dnsmasq exited" ) &
     sleep 2
