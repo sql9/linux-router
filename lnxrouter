@@ -350,19 +350,6 @@ while [[ -n "$1" ]]; do
 done
 
 
-# on success it echos a non-zero unused FD
-# on error it echos 0
-get_avail_fd() {
-    local x
-    for x in $(seq 10 $(ulimit -n)); do
-        if [[ ! -a "/proc/$BASHPID/fd/$x" ]]; then
-            echo $x
-            return
-        fi
-    done
-    echo 0
-}
-
 if [[ -d /dev/shm ]]; then
     TMPDIR=/dev/shm
 elif [[ -d /run/shm ]]; then
@@ -374,93 +361,7 @@ mkdir -p $TMPDIR/lnxrouter_tmpfiles
 TMPDIR=$TMPDIR/lnxrouter_tmpfiles
 chmod 777 $TMPDIR 2>/dev/null
 
-# lock file for the mutex counter
-COUNTER_LOCK_FILE=$TMPDIR/lnxrouter.$$.lock
 
-cleanup_lock() {
-    rm -f $COUNTER_LOCK_FILE
-}
-
-LOCK_FILE=$TMPDIR/lnxrouter.all.lock
-init_lock() {
-
-    # we initialize only once
-    [[ $LOCK_FD -ne 0 ]] && return 0
-
-    LOCK_FD=$(get_avail_fd)
-    [[ $LOCK_FD -eq 0 ]] && return 1
-
-    # open/create lock file with write access for all users
-    # otherwise normal users will not be able to use it.
-    # to avoid race conditions on creation, we need to
-    # use umask to set the permissions.
-    umask 0555
-    eval "exec $LOCK_FD>$LOCK_FILE" > /dev/null 2>&1 || return 1
-    umask $SCRIPT_UMASK
-
-    # there is a case where lock file was created from a normal
-    # user. change the owner to root as soon as we can.
-    [[ $(id -u) -eq 0 ]] && chown 0:0 $LOCK_FILE
-
-    # create mutex counter lock file
-    echo 0 > $COUNTER_LOCK_FILE
-
-    return $?
-}
-
-# recursive mutex lock for all lnxrouter processes
-mutex_lock() {
-    local counter_mutex_fd
-    local counter
-
-    # lock local mutex and read counter
-    counter_mutex_fd=$(get_avail_fd)
-    if [[ $counter_mutex_fd -ne 0 ]]; then
-        eval "exec $counter_mutex_fd<>$COUNTER_LOCK_FILE"
-        flock $counter_mutex_fd
-        read -u $counter_mutex_fd counter
-    else
-        echo "Failed to lock mutex counter" >&2
-        return 1
-    fi
-
-    # lock global mutex and increase counter
-    [[ $counter -eq 0 ]] && flock $LOCK_FD
-    counter=$(( $counter + 1 ))
-
-    # write counter and unlock local mutex
-    echo $counter > /proc/$BASHPID/fd/$counter_mutex_fd
-    eval "exec ${counter_mutex_fd}<&-"
-    return 0
-}
-
-# recursive mutex unlock for all lnxrouter processes
-mutex_unlock() {
-    local counter_mutex_fd
-    local counter
-
-    # lock local mutex and read counter
-    counter_mutex_fd=$(get_avail_fd)
-    if [[ $counter_mutex_fd -ne 0 ]]; then
-        eval "exec $counter_mutex_fd<>$COUNTER_LOCK_FILE"
-        flock $counter_mutex_fd
-        read -u $counter_mutex_fd counter
-    else
-        echo "Failed to lock mutex counter" >&2
-        return 1
-    fi
-
-    # decrease counter and unlock global mutex
-    if [[ $counter -gt 0 ]]; then
-        counter=$(( $counter - 1 ))
-        [[ $counter -eq 0 ]] && flock -u $LOCK_FD
-    fi
-
-    # write counter and unlock local mutex
-    echo $counter > /proc/$BASHPID/fd/$counter_mutex_fd
-    eval "exec ${counter_mutex_fd}<&-"
-    return 0
-}
 
 # it takes 2 arguments
 # returns:
@@ -632,19 +533,16 @@ get_macaddr() {
 alloc_new_iface() { # only for wifi
     local i=0
     local v_iface_name=
-    mutex_lock
     while :; do
         v_iface_name="x$i${WIFI_IFACE}"
         if ! is_interface ${v_iface_name} && [[ ! -f $COMMON_CONFDIR/ifaces/${v_iface_name} ]]; then
             mkdir -p $COMMON_CONFDIR/ifaces
             touch $COMMON_CONFDIR/ifaces/${v_iface_name}
             echo ${v_iface_name}
-            mutex_unlock
             return
         fi
         i=$((i + 1))
     done
-    mutex_unlock
 }
 
 dealloc_iface() {
@@ -659,12 +557,10 @@ get_new_macaddr() {
     local OLDMAC NEWMAC LAST_BYTE i
     OLDMAC=$(get_macaddr "$1")
     LAST_BYTE=$(printf %d 0x${OLDMAC##*:})
-    mutex_lock
     for i in {1..255}; do
         NEWMAC="${OLDMAC%:*}:$(printf %02x $(( ($LAST_BYTE + $i) % 256 )))"
         (get_all_macaddrs | grep "$NEWMAC" > /dev/null 2>&1) || break
     done
-    mutex_unlock
     echo $NEWMAC
 }
 
@@ -672,7 +568,6 @@ get_new_macaddr() {
 haveged_watchdog() {
     local show_warn=1
     while :; do
-        mutex_lock
         if [[ $(cat /proc/sys/kernel/random/entropy_avail) -lt 1000 ]]; then
             if ! which haveged > /dev/null 2>&1; then
                 if [[ $show_warn -eq 1 ]]; then
@@ -685,7 +580,6 @@ haveged_watchdog() {
                 haveged -w 1024 -p $COMMON_CONFDIR/haveged.pid
             fi
         fi
-        mutex_unlock
         sleep 5
     done
 }
@@ -740,7 +634,6 @@ networkmanager_add_unmanaged() {
         [[ -z "$MAC" ]] && return 1
     fi
 
-    mutex_lock
     UNMANAGED=$(grep -m1 -Eo '^unmanaged-devices=[[:alnum:]:;,-]*' /etc/NetworkManager/NetworkManager.conf)
 
     WAS_EMPTY=0
@@ -751,7 +644,6 @@ networkmanager_add_unmanaged() {
     for x in $UNMANAGED; do
         if [[ $x == "mac:${MAC}" ]] ||
                [[ $NM_OLDER_VERSION -eq 0 && $x == "interface-name:${1}" ]]; then
-            mutex_unlock
             return 2
         fi
     done
@@ -775,7 +667,6 @@ networkmanager_add_unmanaged() {
     fi
 
     ADDED_UNMANAGED="${ADDED_UNMANAGED} ${1} "
-    mutex_unlock
 
     local nm_pid=$(pidof NetworkManager)
     [[ -n "$nm_pid" ]] && kill -HUP $nm_pid
@@ -797,11 +688,9 @@ networkmanager_rm_unmanaged() {
         [[ -z "$MAC" ]] && return 1
     fi
 
-    mutex_lock
     UNMANAGED=$(grep -m1 -Eo '^unmanaged-devices=[[:alnum:]:;,-]*' /etc/NetworkManager/NetworkManager.conf | sed 's/unmanaged-devices=//' | tr ';,' ' ')
 
     if [[ -z "$UNMANAGED" ]]; then
-        mutex_unlock
         return 1
     fi
 
@@ -818,7 +707,6 @@ networkmanager_rm_unmanaged() {
     fi
 
     ADDED_UNMANAGED="${ADDED_UNMANAGED/ ${1} /}"
-    mutex_unlock
 
     local nm_pid=$(pidof NetworkManager)
     [[ -n "$nm_pid" ]] && kill -HUP $nm_pid
@@ -829,9 +717,7 @@ networkmanager_rm_unmanaged() {
 networkmanager_fix_unmanaged() {
     [[ -f ${NETWORKMANAGER_CONF} ]] || return
 
-    mutex_lock
     sed -e "/^unmanaged-devices=.*/d" -i ${NETWORKMANAGER_CONF}
-    mutex_unlock
 
     local nm_pid=$(pidof NetworkManager)
     [[ -n "$nm_pid" ]] && kill -HUP $nm_pid
@@ -971,7 +857,6 @@ kill_processes() {
 _cleanup() {
     local PID x
 
-    mutex_lock
     #disown -a
 
     rm -rf $CONFDIR
@@ -1012,8 +897,6 @@ _cleanup() {
     fi
     
 
-    mutex_unlock
-    cleanup_lock
 }
 
 clean_iptables() {
@@ -1070,18 +953,15 @@ clean_exit() { # SIGUSR1
 
 list_running_conf() {
     local x
-    mutex_lock
     for x in $TMPDIR/lnxrouter.*; do
         if [[ -f $x/pid && -f $x/subn_iface && -d /proc/$(cat $x/pid) ]]; then
             echo $x
         fi
     done
-    mutex_unlock
 }
 
 list_running() {
     local IFACE subn_iface x
-    mutex_lock
     for x in $(list_running_conf); do
         IFACE=${x#*.}
         IFACE=${IFACE%%.*}
@@ -1093,7 +973,6 @@ list_running() {
             echo $(cat $x/pid) $IFACE '('$(cat $x/subn_iface)')'
         fi
     done
-    mutex_unlock
 }
 
 get_subn_iface_from_pid() {
@@ -1106,14 +985,12 @@ get_pid_from_subn_iface() {
 
 get_confdir_from_pid() {
     local IFACE x
-    mutex_lock
     for x in $(list_running_conf); do
         if [[ $(cat $x/pid) == "$1" ]]; then
             echo $x
             break
         fi
     done
-    mutex_unlock
 }
 
 print_client_by_mac() {
@@ -1191,17 +1068,14 @@ list_clients() {
 has_running_instance() {
     local PID x
 
-    mutex_lock
     for x in $TMPDIR/lnxrouter.*; do
         if [[ -f $x/pid ]]; then
             PID=$(cat $x/pid)
             if [[ -d /proc/$PID ]]; then
-                mutex_unlock
                 return 0
             fi
         fi
     done
-    mutex_lock
 
     return 1
 }
@@ -1213,11 +1087,9 @@ is_running_pid() {
 send_stop() {
     local x
 
-    mutex_lock
     # send stop signal to specific pid
     if is_running_pid $1; then
         kill -USR1 $1
-        mutex_unlock
         return
     fi
 
@@ -1225,16 +1097,10 @@ send_stop() {
     for x in $(list_running | grep -E " \(?${1}( |\)?\$)" | cut -f1 -d' '); do
         kill -USR1 $x
     done
-    mutex_unlock
 }
 
 
-trap "cleanup_lock" EXIT
 
-if ! init_lock; then
-    echo "ERROR: Failed to initialize lock" >&2
-    exit 1
-fi
 
 # if the user press ctrl+c or we get USR1 signal
 # then run clean_exit()
@@ -1405,7 +1271,6 @@ else
 fi
 echo "Target interface is ${TARGET_IFACE}"
 
-mutex_lock
 trap "cleanup" EXIT
 CONFDIR=$(mktemp -d $TMPDIR/lnxrouter.${TARGET_IFACE}.conf.XXXXXXXX)
 #echo "Config dir: $CONFDIR"
@@ -1422,7 +1287,6 @@ mkdir -p $COMMON_CONFDIR
 
 cp -n /proc/sys/net/ipv4/ip_forward $COMMON_CONFDIR
 
-mutex_unlock
 
 if [[ $WIFI_IFACE ]]; then
 
@@ -1489,10 +1353,8 @@ else
     SUBNET_IFACE=${TARGET_IFACE}
 fi
 
-mutex_lock
 echo $SUBNET_IFACE > $CONFDIR/subn_iface
 chmod 444 $CONFDIR/subn_iface
-mutex_unlock
 
 if [[ $WIFI_IFACE ]]; then
 
