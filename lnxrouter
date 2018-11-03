@@ -357,8 +357,8 @@ elif [[ -d /run/shm ]]; then
 else
     TMPDIR=/tmp
 fi
-mkdir -p $TMPDIR/lnxrouter_tmpfiles
-TMPDIR=$TMPDIR/lnxrouter_tmpfiles
+mkdir -p $TMPDIR/lnxrouter_tmp
+TMPDIR=$TMPDIR/lnxrouter_tmp
 chmod 777 $TMPDIR 2>/dev/null
 
 
@@ -945,7 +945,6 @@ die() { # SIGUSR2
 }
 
 clean_exit() { # SIGUSR1
-    echo "clean_exit()"
     # send clean_exit signal to the main process
     [[ $BASHPID -ne $$ ]] && kill -USR1 $$ || cleanup
     exit 0
@@ -1104,7 +1103,7 @@ send_stop() {
 
 # if the user press ctrl+c or we get USR1 signal
 # then run clean_exit()
-trap "cleanup" SIGINT SIGUSR1 SIGTERM
+trap "clean_exit" SIGINT SIGUSR1 SIGTERM
 # if we get USR2 signal then run die().
 trap "die" SIGUSR2
 
@@ -1621,6 +1620,4 @@ echo $KEEP_RUNNING_PID > $CONFDIR/keep_running.pid
 
 wait $KEEP_RUNNING_PID
 
-
-#clean_exit
-#cleanup
+clean_exit
