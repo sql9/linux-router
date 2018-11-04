@@ -22,7 +22,7 @@ usage() {
     echo "  -i <interface>          Interface to share Internet to. An NATed subnet is made upon it."
     echo "                          To create Wifi hotspot use '--ap' instead"
     echo "  -n                      Disable Internet sharing"
-    echo "  --tp <port>             Transparent proxy (redsocks), redirect tcp and udp traffic to port."
+    echo "  --tp <port>             Transparent proxy, redirect non-LAN tcp and udp traffic to port."
     echo "                          Usually use with --dns-proxy"
     echo 
     echo "  -g <gateway>            Set Gateway IPv4 address, netmask is /24 (default: 192.168.18.1)"
@@ -660,7 +660,7 @@ unredirect_dns() {
 
 start_redsocks() {
     echo
-    echo "iptables: redirect all TCP and UDP traffic to transparent proxy port ${TP_PORT}"
+    echo "iptables: transparent proxy non-LAN TCP/UDP traffic to port ${TP_PORT}"
     iptables_ -t nat -N REDSOCKS-${SUBNET_IFACE} || die
     iptables_ -t nat -A REDSOCKS-${SUBNET_IFACE} -d 0.0.0.0/8 -j RETURN || die
     iptables_ -t nat -A REDSOCKS-${SUBNET_IFACE} -d 10.0.0.0/8 -j RETURN || die
@@ -962,6 +962,15 @@ if [[ $SHARE_METHOD == 'none' ]]; then
     dnsmasq_NO_DNS=1
 fi
 
+if [[ -d /dev/shm ]]; then
+    TMPDIR=/dev/shm
+elif [[ -d /run/shm ]]; then
+    TMPDIR=/run/shm
+else
+    TMPDIR=/tmp
+fi
+TMPDIR=$TMPDIR/lnxrouter_tmp
+
 #======
 
 if [[ $LIST_RUNNING -eq 1 ]]; then
@@ -1104,16 +1113,7 @@ trap "cleanup" EXIT
 trap "clean_exit" SIGINT SIGUSR1 SIGTERM
 trap "die" SIGUSR2
 
-
-if [[ -d /dev/shm ]]; then
-    TMPDIR=/dev/shm
-elif [[ -d /run/shm ]]; then
-    TMPDIR=/run/shm
-else
-    TMPDIR=/tmp
-fi
-mkdir -p $TMPDIR/lnxrouter_tmp
-TMPDIR=$TMPDIR/lnxrouter_tmp
+mkdir -p $TMPDIR
 chmod 755 $TMPDIR 2>/dev/null
 
 CONFDIR=$(mktemp -d $TMPDIR/lnxrouter.${TARGET_IFACE}.conf.XXX)
