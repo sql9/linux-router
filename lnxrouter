@@ -735,9 +735,9 @@ _cleanup() {
             rm -f $COMMON_CONFDIR/ip_forward
         fi
 
-
-        rm -rf $COMMON_CONFDIR
-        rm -rf $TMPDIR
+        rm -d $COMMON_CONFDIR/ifaces
+        rm -d $COMMON_CONFDIR
+        rm -d $TMPDIR
     else
         echo "Exiting: This is NOT the only running instance"
     fi
@@ -1102,7 +1102,8 @@ if [[ $CONN_IFACE ]]; then
 elif [[ $WIFI_IFACE ]]; then
     TARGET_IFACE=$WIFI_IFACE
 else
-    die "No target interface specified"
+    echo "No target interface specified" 1>&2
+    exit 1
 fi
 echo "Target interface is ${TARGET_IFACE}"
 
