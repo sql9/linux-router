@@ -343,23 +343,6 @@ done
 #  0 if v1 (1st argument) and v2 (2nd argument) are the same
 #  1 if v1 is less than v2
 #  2 if v1 is greater than v2
-version_cmp() {
-    local V1 V2 VN x
-    [[ ! $1 =~ ^[0-9]+(\.[0-9]+)*$ ]] && die "Wrong version format!"
-    [[ ! $2 =~ ^[0-9]+(\.[0-9]+)*$ ]] && die "Wrong version format!"
-
-    V1=( $(echo $1 | tr '.' ' ') )
-    V2=( $(echo $2 | tr '.' ' ') )
-    VN=${#V1[@]}
-    [[ $VN -lt ${#V2[@]} ]] && VN=${#V2[@]}
-
-    for ((x = 0; x < $VN; x++)); do
-        [[ ${V1[x]} -lt ${V2[x]} ]] && return 1
-        [[ ${V1[x]} -gt ${V2[x]} ]] && return 2
-    done
-
-    return 0
-}
 
 #=========
 
@@ -556,8 +539,6 @@ NM_RUNNING=0
 NM_UNM_LIST=
 if (which nmcli >/dev/null 2>&1 ) && (nmcli -t -f RUNNING g 2>&1 | grep -E '^running$' >/dev/null 2>&1 ) ; then
     NM_RUNNING=1
-    NM_VER=$(nmcli -v | grep -m1 -oE '[0-9]+(\.[0-9]+)*\.[0-9]+')
-    version_cmp $NM_VER 0.9.9 && echo "Warning: NetworkManager need >=0.9.9 or you may encounter problems"
 fi
 
 nm_knows() {
@@ -1284,18 +1265,10 @@ fi
 
 if [[ $NO_DNSMASQ -eq 0 ]]; then
     # dnsmasq config (dhcp + dns)
-    DNSMASQ_VER=$(dnsmasq -v | grep -m1 -oE '[0-9]+(\.[0-9]+)*\.[0-9]+')
-    version_cmp $DNSMASQ_VER 2.63
-    if [[ $? -eq 1 ]]; then
-        DNSMASQ_BIND=bind-interfaces
-    else
-        DNSMASQ_BIND=bind-dynamic
-    fi
-    
     cat << EOF > $CONFDIR/dnsmasq.conf
 user=nobody
 group=nobody
-${DNSMASQ_BIND}
+bind-dynamic
 listen-address=${GATEWAY}
 interface=$SUBNET_IFACE
 except-interface=*
