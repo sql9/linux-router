@@ -14,6 +14,7 @@ Basic features:
 - Share Internet to the sub-network
 - DHCP server
 - DNS server 
+- IPv6 (NAT)
 - Creating Wifi hotspot:
   - Channel selecting
   - Choose encryptions: WPA2/WPA, WPA2, WPA, No encryption
@@ -165,16 +166,18 @@ Options:
   -i <interface>          Interface to share Internet to. An NATed subnet is made upon it.
                           To create Wifi hotspot use '--ap' instead
   -n                      Disable Internet sharing
-  --tp <port>             Transparent proxy (redsocks), redirect tcp and udp traffic to port.
+  --tp <port>             Transparent proxy, redirect non-LAN tcp and udp traffic to port.
                           Usually use with --dns-proxy
 
-  -g <gateway>            Set Gateway IPv4 address, netmask is /24 (default: 192.168.18.1)
+  -g <gateway>            Set gateway IPv4 address, netmask is /24 (default: 192.168.18.1)
+  -6                      Enable IPv6
+  --p6 <prefix>           Set IPv6 prefix (length 64) (default: fd00:1:1:1:: )
   --dns-proxy <port>      Redirect incoming port 53 to DNS proxy port. DNS server is disabled
   --no-serve-dns          Disable DNS server
   --no-dnsmasq            Disable dnsmasq server completely (DHCP and DNS)
   --log-dns               Show DNS server query log
   --dhcp-dns <IP1[,IP2]>|no
-                          Set DNS offered by DHCP, or no DNS offered (default: gateway as DNS)
+                          Set IPv4 DNS offered by DHCP (default: gateway as DNS)
   -d                      DNS server will take into account /etc/hosts
   -e <hosts_file>         DNS server will take into account additional hosts file
 
@@ -234,7 +237,6 @@ Wifi hotspot:
 ## TODO
 
 - Option to ban private network access
-- IPv6 support 
 - Option to random MAC, IP, SSID, password
 - Option to specify out-going interface
 - Option to catch and redirect all dns connections
