@@ -2,7 +2,7 @@
 
 Share your Linux's Internet access to other devices. 
 
-The goal is to easily set/unset your Linux PC/embedded device as a gateway/hotspot/transparent proxy. It wraps the complicated `iptables`, `dnsmasq` etc. stuff. Use in one command, restore by `control-c`.
+The goal is to easily set/unset your Linux PC/embedded device as a gateway/hotspot/transparent proxy. It wraps `iptables`, `dnsmasq` etc. stuff. Use in one command, restore by `control-c`.
 
 It works on wired, wireless and virtual networks.
  
@@ -90,6 +90,8 @@ In `torrc`
 ```
 TransPort 0.0.0.0:9040 
 DNSPort 0.0.0.0:9053
+TransPort [::]:9040 
+DNSPort [::]:9053
 ```
 ### Use for LXC
 Create a bridge
