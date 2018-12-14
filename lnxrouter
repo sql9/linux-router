@@ -1385,8 +1385,8 @@ EOF
 listen-address=${GATEWAY6}
 enable-ra
 #quiet-ra
-dhcp-range=interface:${SUBNET_IFACE},::1,::ffff:ffff:ffff:fffe,constructor:${SUBNET_IFACE},ra-only,64
 dhcp-option=option6:dns-server,[${GATEWAY6}]
+dhcp-range=interface:${SUBNET_IFACE},::,::ffff:ffff:ffff:ffff,constructor:${SUBNET_IFACE},ra-stateless,64
 EOF
     fi
 fi
