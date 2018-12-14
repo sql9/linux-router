@@ -764,11 +764,13 @@ kill_processes() {
 _cleanup() {
     local x
 
-    nm_restore_manage
-
-    rm -rf $CONFDIR
-
     ip addr flush ${SUBNET_IFACE}
+    
+    if [[ $IPV6 -eq 1 ]]; then
+        cp -f $CONFDIR/sys_6_conf_iface/* /proc/sys/net/ipv6/conf/$SUBNET_IFACE/
+    fi
+    rm -rf $CONFDIR
+    
     if [[ $WIFI_IFACE && $NO_VIRT -eq 0 ]]; then
         ip link set down dev ${AP_IFACE}
         iw dev ${VWIFI_IFACE} del
@@ -779,21 +781,14 @@ _cleanup() {
         fi
     fi
     
-    # if we are the last lnxrouter instance then set back the common values
+    
     if ! has_running_instance; then
         echo "Exiting: This is the only running instance"
         # kill common processes
         for x in $COMMON_CONFDIR/*.pid; do
             [[ -f $x ]] && kill -9 $(cat $x) && rm $x
         done
-
-        # set old ip_forward
-        if [[ -f $COMMON_CONFDIR/ip_forward ]]; then
-            echo "Set to old value: /proc/sys/net/ipv4/ip_forward=$(cat $COMMON_CONFDIR/ip_forward)"
-            cp -f $COMMON_CONFDIR/ip_forward /proc/sys/net/ipv4
-            rm -f $COMMON_CONFDIR/ip_forward
-        fi
-
+        
         rm -d $COMMON_CONFDIR/ifaces
         rm -d $COMMON_CONFDIR
         rm -d $TMPDIR
@@ -801,7 +796,7 @@ _cleanup() {
         echo "Exiting: This is NOT the only running instance"
     fi
     
-
+    nm_restore_manage
 }
 
 clean_iptables() {
@@ -1190,7 +1185,6 @@ echo $$ > $CONFDIR/pid
 COMMON_CONFDIR=$TMPDIR/lnxrouter_common.conf
 mkdir -p $COMMON_CONFDIR
 
-cp -n /proc/sys/net/ipv4/ip_forward $COMMON_CONFDIR
 
 
 if [[ $WIFI_IFACE ]]; then
@@ -1444,6 +1438,16 @@ fi
 
 ip addr add ${GATEWAY}/24 broadcast ${GATEWAY%.*}.255 dev ${SUBNET_IFACE} || die "Failed setting ${SUBNET_IFACE} IP"
 if [[ $IPV6 -eq 1 ]]; then
+    mkdir $CONFDIR/sys_6_conf_iface
+    cp /proc/sys/net/ipv6/conf/$SUBNET_IFACE/accept_ra     \
+        /proc/sys/net/ipv6/conf/$SUBNET_IFACE/use_tempaddr  \
+        /proc/sys/net/ipv6/conf/$SUBNET_IFACE/addr_gen_mode \
+            $CONFDIR/sys_6_conf_iface/
+    
+    echo 0 > /proc/sys/net/ipv6/conf/$SUBNET_IFACE/accept_ra
+    echo 0 > /proc/sys/net/ipv6/conf/$SUBNET_IFACE/use_tempaddr
+    echo 0 > /proc/sys/net/ipv6/conf/$SUBNET_IFACE/addr_gen_mode
+    
     ip -6 addr add ${GATEWAY6}/64  dev ${SUBNET_IFACE} || die "Failed setting ${SUBNET_IFACE} IPv6"
 fi
 
@@ -1453,6 +1457,9 @@ if [[ "$SHARE_METHOD" == "none" ]]; then
 elif [[ "$SHARE_METHOD" == "nat" ]]; then
     start_nat
     echo 1 > /proc/sys/net/ipv4/ip_forward || die "Failed enabling system ipv4 forwarding"
+    if [[ $IPV6 -eq 1 ]]; then
+        echo 1 > /proc/sys/net/ipv6/conf/all/forwarding || die "Failed enabling system ipv6 forwarding"
+    fi
     # to enable clients to establish PPTP connections we must
     # load nf_nat_pptp module
     modprobe nf_nat_pptp > /dev/null 2>&1
