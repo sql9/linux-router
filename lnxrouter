@@ -23,19 +23,19 @@ usage() {
     echo "                          To create Wifi hotspot use '--ap' instead"
     echo "  -n                      Disable Internet sharing"
     echo "  --tp <port>             Transparent proxy, redirect non-LAN tcp and udp traffic to port."
-    echo "                          Usually use with --dns-proxy"
+    echo "                          Usually used with --dns-proxy"
     echo 
     echo "  -g <gateway>            Set gateway IPv4 address, netmask is /24 (default: 192.168.18.1)"
-    echo "  -6                      Enable IPv6"
+    echo "  -6                      Enable IPv6 (NAT)"
     echo "  --p6 <prefix>           Set IPv6 prefix (length 64) (default: fd00:1:1:1:: )"
     echo "  --dns-proxy <port>      Redirect incoming port 53 to DNS proxy port. DNS server is disabled"
     echo "  --no-serve-dns          Disable DNS server"
-    echo "  --no-dnsmasq            Disable dnsmasq server completely (DHCP and DNS)"
+    echo "  --no-dnsmasq            Disable dnsmasq server completely (DHCP, DNS, RA)"
     echo "  --log-dns               Show DNS server query log"
     echo "  --dhcp-dns <IP1[,IP2]>|no"
     echo "                          Set IPv4 DNS offered by DHCP (default: gateway as DNS)"
     echo "  --dhcp-dns6 <IP1[,IP2]>|no"
-    echo "                          Set IPv6 DNS offered by DHCP (default: gateway as DNS)"
+    echo "                          Set IPv6 DNS offered by DHCP(RA) (default: gateway as DNS)"
     echo "                          Note IPv6 addresses need '[]' around"
     echo "  -d                      DNS server will take into account /etc/hosts"
     echo "  -e <hosts_file>         DNS server will take into account additional hosts file"
@@ -44,12 +44,12 @@ usage() {
     echo 
     echo " Wifi hotspot options:"
     echo "  --ap <wlan card interface> <access point name>"
-    echo "                          Create Wifi access point using wlan card, and set SSID"
+    echo "                          Create Wifi access point"
     echo "  --password <passphrase> Wifi password"
     echo 
-    echo "  --hidden                Make the Access Point hidden (do not broadcast the SSID)"
+    echo "  --hidden                Hide access point (not broadcast SSID)"
     echo "  --no-virt               Do not create virtual interface. "
-    echo "                          Using this you can't use same wlan card as Internet and AP"
+    echo "                          Using this you can't use same wlan card for both Internet and AP"
     echo "  -c <channel>            Channel number (default: 1)"
     echo "  --country <code>        Set two-letter country code for regularity (example: US)"
     echo "  --freq-band <GHz>       Set frequency band. Valid inputs: 2.4, 5 (default: 2.4)"
@@ -632,8 +632,8 @@ allow_dns_port() {
     iptables_ -v -I INPUT -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -d ${GATEWAY} -p tcp -m tcp --dport 53 -j ACCEPT || die
     iptables_ -v -I INPUT -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -d ${GATEWAY} -p udp -m udp --dport 53 -j ACCEPT || die
     if [[ $IPV6 -eq 1 ]]; then
-        ip6tables_ -v -I INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64  -p tcp -m tcp --dport 53 -j ACCEPT || die
-        ip6tables_ -v -I INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64  -p udp -m udp --dport 53 -j ACCEPT || die
+        ip6tables_ -v -I INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64 -d ${GATEWAY6} -p tcp -m tcp --dport 53 -j ACCEPT || die
+        ip6tables_ -v -I INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64 -d ${GATEWAY6} -p udp -m udp --dport 53 -j ACCEPT || die
     fi
 }
 unallow_dns_port() {
@@ -641,8 +641,8 @@ unallow_dns_port() {
     iptables_ -D INPUT -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -d ${GATEWAY} -p tcp -m tcp --dport 53 -j ACCEPT
     iptables_ -D INPUT -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -d ${GATEWAY}  -p udp -m udp --dport 53 -j ACCEPT
     if [[ $IPV6 -eq 1 ]]; then
-        ip6tables_ -D INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64  -p tcp -m tcp --dport 53 -j ACCEPT
-        ip6tables_ -D INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64  -p udp -m udp --dport 53 -j ACCEPT
+        ip6tables_ -D INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64 -d ${GATEWAY6} -p tcp -m tcp --dport 53 -j ACCEPT
+        ip6tables_ -D INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64 -d ${GATEWAY6} -p udp -m udp --dport 53 -j ACCEPT
     fi
 }
 
@@ -674,11 +674,11 @@ redirect_dns() {
     
     if [[ $IPV6 -eq 1 ]]; then
         # allow input to  dns proxy port
-        ip6tables_ -v -I INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64  -p tcp -m tcp --dport ${TP_DNS_PORT} -j ACCEPT || die
-        ip6tables_ -v -I INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64  -p udp -m udp --dport ${TP_DNS_PORT} -j ACCEPT || die
+        ip6tables_ -v -I INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64 -d ${GATEWAY6} -p tcp -m tcp --dport ${TP_DNS_PORT} -j ACCEPT || die
+        ip6tables_ -v -I INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64 -d ${GATEWAY6} -p udp -m udp --dport ${TP_DNS_PORT} -j ACCEPT || die
         # redirect 53 to dns proxy
-        ip6tables_ -v -t nat -I PREROUTING -i ${SUBNET_IFACE} -s ${PREFIX6}/64  -p tcp -m tcp --dport 53 -j REDIRECT --to-ports ${TP_DNS_PORT} || die
-        ip6tables_ -v -t nat -I PREROUTING -i ${SUBNET_IFACE} -s ${PREFIX6}/64  -p udp -m udp --dport 53 -j REDIRECT --to-ports ${TP_DNS_PORT} || die  
+        ip6tables_ -v -t nat -I PREROUTING -i ${SUBNET_IFACE} -s ${PREFIX6}/64 -d ${GATEWAY6} -p tcp -m tcp --dport 53 -j REDIRECT --to-ports ${TP_DNS_PORT} || die
+        ip6tables_ -v -t nat -I PREROUTING -i ${SUBNET_IFACE} -s ${PREFIX6}/64 -d ${GATEWAY6} -p udp -m udp --dport 53 -j REDIRECT --to-ports ${TP_DNS_PORT} || die  
     fi
 }
 unredirect_dns() {
@@ -690,11 +690,11 @@ unredirect_dns() {
     iptables_ -t nat -D PREROUTING -i ${SUBNET_IFACE} -s ${GATEWAY%.*}.0/24 -d ${GATEWAY} -p udp -m udp --dport 53 -j REDIRECT --to-ports ${TP_DNS_PORT}
     
     if [[ $IPV6 -eq 1 ]]; then
-        ip6tables_ -D INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64  -p tcp -m tcp --dport ${TP_DNS_PORT} -j ACCEPT
-        ip6tables_ -D INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64  -p udp -m udp --dport ${TP_DNS_PORT} -j ACCEPT
+        ip6tables_ -D INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64 -d ${GATEWAY6} -p tcp -m tcp --dport ${TP_DNS_PORT} -j ACCEPT
+        ip6tables_ -D INPUT -i ${SUBNET_IFACE} -s ${PREFIX6}/64 -d ${GATEWAY6} -p udp -m udp --dport ${TP_DNS_PORT} -j ACCEPT
 
-        ip6tables_ -t nat -D PREROUTING -i ${SUBNET_IFACE} -s ${PREFIX6}/64  -p tcp -m tcp --dport 53 -j REDIRECT --to-ports ${TP_DNS_PORT}
-        ip6tables_ -t nat -D PREROUTING -i ${SUBNET_IFACE} -s ${PREFIX6}/64  -p udp -m udp --dport 53 -j REDIRECT --to-ports ${TP_DNS_PORT}
+        ip6tables_ -t nat -D PREROUTING -i ${SUBNET_IFACE} -s ${PREFIX6}/64 -d ${GATEWAY6} -p tcp -m tcp --dport 53 -j REDIRECT --to-ports ${TP_DNS_PORT}
+        ip6tables_ -t nat -D PREROUTING -i ${SUBNET_IFACE} -s ${PREFIX6}/64 -d ${GATEWAY6} -p udp -m udp --dport 53 -j REDIRECT --to-ports ${TP_DNS_PORT}
     fi
 }
 
@@ -1481,6 +1481,9 @@ elif [[ "$SHARE_METHOD" == "nat" ]]; then
     # load nf_nat_pptp module
     modprobe nf_nat_pptp > /dev/null 2>&1
 elif [[ "$SHARE_METHOD" == "redsocks" ]]; then
+    if [[ $IPV6 -eq 1 ]]; then
+        echo 1 > /proc/sys/net/ipv6/conf/$SUBNET_IFACE/forwarding || die "Failed enabling $SUBNET_IFACE ipv6 forwarding"
+    fi
     if [[ "$dnsmasq_NO_DNS" -eq 0 ]]; then
         echo 
         echo "WARN: You are using transparent proxy but gateway is providing local DNS, this may cause privacy leak !!!" >&2
