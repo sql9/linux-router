@@ -9,81 +9,90 @@ SCRIPT_UMASK=0122
 umask $SCRIPT_UMASK
 
 usage() {
-    echo "linux-router $VERSION (https://github.com/garywill/linux-router)"
-    echo "    Share your Linux's Internet access to other devices. "
-    echo "    Works on wired, wireless and virtual networks."
-    echo 
-    echo "Usage: "$PROGNAME" [options] "
-    echo
-    echo "Options:"
-    echo "  -h, --help              Show this help"
-    echo "  --version               Print version number"
-    echo
-    echo "  -i <interface>          Interface to share Internet to. An NATed subnet is made upon it."
-    echo "                          To create Wifi hotspot use '--ap' instead"
-    echo "  -n                      Disable Internet sharing"
-    echo "  --tp <port>             Transparent proxy, redirect non-LAN tcp and udp traffic to port."
-    echo "                          Usually used with --dns-proxy"
-    echo 
-    echo "  -g <gateway>            Set gateway IPv4 address, netmask is /24 (default: 192.168.18.1)"
-    echo "  -6                      Enable IPv6 (NAT)"
-    echo "  --p6 <prefix>           Set IPv6 prefix (length 64) (default: fd00:1:1:1:: )"
-    echo "  --dns-proxy <port>      Redirect incoming port 53 to DNS proxy port. DNS server is disabled"
-    echo "  --no-serve-dns          Disable DNS server"
-    echo "  --no-dnsmasq            Disable dnsmasq server completely (DHCP, DNS, RA)"
-    echo "  --log-dns               Show DNS server query log"
-    echo "  --dhcp-dns <IP1[,IP2]>|no"
-    echo "                          Set IPv4 DNS offered by DHCP (default: gateway as DNS)"
-    echo "  --dhcp-dns6 <IP1[,IP2]>|no"
-    echo "                          Set IPv6 DNS offered by DHCP(RA) (default: gateway as DNS)"
-    echo "                          Note IPv6 addresses need '[]' around"
-    echo "  -d                      DNS server will take into account /etc/hosts"
-    echo "  -e <hosts_file>         DNS server will take into account additional hosts file"
-    echo 
-    echo "  --mac <MAC>             Set MAC address"
-    echo 
-    echo " Wifi hotspot options:"
-    echo "  --ap <wlan card interface> <access point name>"
-    echo "                          Create Wifi access point"
-    echo "  --password <passphrase> Wifi password"
-    echo 
-    echo "  --hidden                Hide access point (not broadcast SSID)"
-    echo "  --no-virt               Do not create virtual interface. "
-    echo "                          Using this you can't use same wlan card for both Internet and AP"
-    echo "  -c <channel>            Channel number (default: 1)"
-    echo "  --country <code>        Set two-letter country code for regularity (example: US)"
-    echo "  --freq-band <GHz>       Set frequency band. Valid inputs: 2.4, 5 (default: 2.4)"
-    echo "  --driver                Choose your WiFi adapter driver (default: nl80211)"
-    echo "  -w <WPA version>        Use 1 for WPA, use 2 for WPA2, use 1+2 for both (default: 1+2)"
-    echo "  --psk                   Use 64 hex digits pre-shared-key instead of passphrase"
-    echo "  --mac-filter            Enable Wifi hotspot MAC address filtering"
-    echo "  --mac-filter-accept     Location of Wifi hotspot MAC address filter list (defaults to /etc/hostapd/hostapd.accept)"
-    echo "  --hostapd-debug <level> With level between 1 and 2, passes arguments -d or -dd to hostapd for debugging."
-    echo "  --isolate-clients       Disable communication between clients"
-    echo "  --ieee80211n            Enable IEEE 802.11n (HT)"
-    echo "  --ieee80211ac           Enable IEEE 802.11ac (VHT)"
-    echo "  --ht_capab <HT>         HT capabilities (default: [HT40+])"
-    echo "  --vht_capab <VHT>       VHT capabilities"
-    echo "  --no-haveged            Do not run 'haveged' automatically when needed"
-    echo
-    echo " Instance managing:"
-    echo "  --daemon                Run lnxrouter in the background"
-    echo "  --list-running          Show the lnxrouter processes that are already running"
-    echo "  --stop <id>             Send stop command to an already running lnxrouter. For an <id>"
-    echo "                          you can put the PID of lnxrouter or interface. You can"
-    echo "                          get them with --list-running"
-    echo "  --list-clients <id>     List the clients connected to lnxrouter instance associated with <id>."
-    echo "                          For an <id> you can put the PID of lnxrouter or interface."
-    echo "                          If virtual WiFi interface was created, then use that one."
-    echo "                          You can get them with --list-running"
-    echo
-    echo "Examples:"
-    echo "  "$PROGNAME" -i eth1"
-    echo "  "$PROGNAME" --ap wlan0 MyAccessPoint --password MyPassPhrase"
-    echo "  "$PROGNAME" --ap wlan0 MyAccessPoint"
-    echo "  "$PROGNAME" -n --ap wlan0 MyAccessPoint --password MyPassPhrase"
-    echo "  "$PROGNAME" --driver rtl871xdrv --ap wlan0 MyAccessPoint --password MyPassPhrase"
-    echo "  "$PROGNAME" -i eth1 --tp <transparent-proxy> --dns-proxy <dns-proxy>"
+    cat << EOF
+linux-router $VERSION (https://github.com/garywill/linux-router)
+
+Usage: $PROGNAME [options] 
+
+Options:
+    -h, --help              Show this help
+    --version               Print version number
+
+    -i <interface>          Interface to share Internet to.
+                            An NATed subnet is made upon it.
+                            To create Wifi hotspot use '--ap' instead
+    -n                      Disable Internet sharing
+    --tp <port>             Transparent proxy.
+                            redirect non-LAN tcp and udp traffic to port.
+                            Usually used with '--dns-proxy'
+    
+    -g <gateway>            Set gateway IPv4 address, netmask is /24 .
+                            (default: 192.168.18.1)
+    -6                      Enable IPv6 (NAT)
+    --p6 <prefix>           Set IPv6 prefix (length 64)
+                            (default: fd00:1:1:1:: )
+    --dns-proxy <port>      Redirect incoming port 53 to DNS proxy port.
+                            DNS server is disabled
+    --no-serve-dns          Disable DNS server
+    --no-dnsmasq            Disable dnsmasq server completely (DHCP, DNS, RA)
+    --log-dns               Show DNS server query log
+    --dhcp-dns <IP1[,IP2]>|no
+                            Set IPv4 DNS offered by DHCP 
+                            (default: gateway as DNS)
+    --dhcp-dns6 <IP1[,IP2]>|no
+                            Set IPv6 DNS offered by DHCP(RA) 
+                            (default: gateway as DNS)
+                            Note IPv6 addresses need '[]' around
+    -d                      DNS server will take into account /etc/hosts
+    -e <hosts_file>         DNS server will take into account additional 
+                            hosts file
+    
+    --mac <MAC>             Set MAC address
+ 
+  Wifi hotspot options:
+    --ap <wifi interface> <SSID>
+                            Create Wifi access point
+    --password <password>   Wifi password
+    
+    --hidden                Hide access point (not broadcast SSID)
+    --no-virt               Do not create virtual interface
+                            Using this you can't use same wlan interface
+                            for both Internet and AP
+    -c <channel>            Channel number (default: 1)
+    --country <code>        Set two-letter country code for regularity
+                            (example: US)
+    --freq-band <GHz>       Set frequency band: 2.4 or 5 (default: 2.4)
+    --driver                Choose your WiFi adapter driver (default: nl80211)
+    -w <WPA version>        Use 1 for WPA, use 2 for WPA2, use 1+2 for both
+                            (default: 1+2)
+    --psk                   Use 64 hex digits pre-shared-key instead of
+                            passphrase
+    --mac-filter            Enable Wifi hotspot MAC address filtering
+    --mac-filter-accept     Location of Wifi hotspot MAC address filter list
+                            (defaults to /etc/hostapd/hostapd.accept)
+    --hostapd-debug <level> 1 or 2. Passes -d or -dd to hostapd
+    --isolate-clients       Disable wifi communication between clients
+    --ieee80211n            Enable IEEE 802.11n (HT)
+    --ieee80211ac           Enable IEEE 802.11ac (VHT)
+    --ht_capab <HT>         HT capabilities (default: [HT40+])
+    --vht_capab <VHT>       VHT capabilities
+    --no-haveged            Do not run haveged automatically when needed
+
+  Instance managing:
+    --daemon                Run in background
+    --list-running          Show running instances
+    --list-clients <id>     List clients of an instance
+    --stop <id>             Stop a running instance
+        For <id> you can use PID or subnet interface name.
+        You can get them with '--list-running'
+
+Examples:
+    $PROGNAME -i eth1
+    $PROGNAME --ap wlan0 MyAccessPoint
+    $PROGNAME --ap wlan0 MyAccessPoint --password MyPassPhrase
+    $PROGNAME -n --ap wlan0 MyAccessPoint --password MyPassPhrase
+    $PROGNAME -i eth1 --tp <transparent-proxy> --dns-proxy <dns-proxy>
+EOF
 }
 
 if [[ "$1" == "" ]]; then
@@ -1343,7 +1352,7 @@ EOF
     else
         echo "WARN: Wifi is not protected by password" >&2
     fi
-chmod 600 $CONFDIR/hostapd.conf
+	chmod 600 $CONFDIR/hostapd.conf
 fi
 
 #===================================================

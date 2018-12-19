@@ -1,20 +1,19 @@
 #  Linux-router
 
-Share your Linux's Internet access to other devices. 
+Set Linux as router in one command. Able to Provide Internet, or create Wifi hotspot. Support transparent proxy (redsocks). Also useful for routing VM/containers.
 
-The goal is to easily set/unset your Linux PC/embedded device as a gateway/hotspot/transparent proxy. It wraps `iptables`, `dnsmasq` etc. stuff. Use in one command, restore by `control-c`.
+It wraps `iptables`, `dnsmasq` etc. stuff. Use in one command, restore in one command or by `control-c`.
 
-It works on wired, wireless and virtual networks.
  
 ##  Features
 
 Basic features:
 
 - Create a NATed sub-network
-- Share Internet to the sub-network
-- DHCP server
+- Provide Internet
+- DHCP server and RA
 - DNS server 
-- IPv6 (NAT)
+- IPv6 (NAT only for now)
 - Creating Wifi hotspot:
   - Channel selecting
   - Choose encryptions: WPA2/WPA, WPA2, WPA, No encryption
@@ -93,7 +92,7 @@ DNSPort 0.0.0.0:9053
 TransPort [::]:9040 
 DNSPort [::]:9053
 ```
-### Use for LXC
+### Internet for LXC
 Create a bridge
 ```
 # brctl addbr lxcbr5
@@ -239,9 +238,8 @@ Wifi hotspot:
 ## TODO
 
 - Option to ban private network access
-- Option to random MAC, IP, SSID, password
-- Option to specify out-going interface
-- Option to catch and redirect all dns connections
+- Option to randomize MAC, IP, SSID, password
+- Option to redirect all DNS traffic
 
 ## Thanks
 
