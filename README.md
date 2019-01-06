@@ -231,7 +231,9 @@ Options:
         For <id> you can use PID or subnet interface name.
         You can get them with '--list-running'
 ```
-> On exiting it restores changes done to system, except `/proc/sys/net/ipv4/ip_forward` and `/proc/sys/net/ipv6/conf/all/forwarding` set by NAT mode.
+> These changes to system will not be restored by script's cleanup:
+1. `/proc/sys/net/ipv4/ip_forward = 1` and `/proc/sys/net/ipv6/conf/all/forwarding = 1`, needed by NAT Internet sharing.
+2. dnsmasq in Apparmor complain mode
 
 ## Dependencies
 - bash
