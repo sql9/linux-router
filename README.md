@@ -59,7 +59,7 @@ Internet----(eth0/wlan0)-Linux-(virtual interface)-----VM/container
  
 ## Usage
 
-### Share Internet to an interface
+### Provide Internet to an interface
 
 ```
 # lnxrouter -i eth1
@@ -78,7 +78,7 @@ Internet----(eth0/wlan0)-Linux-(virtual interface)-----VM/container
 # lnxrouter --ap wlan0 MyAccessPoint --password MyPassPhrase -n
 ```
 
-### Transparent proxy with tor
+### Transparent proxy with Tor
 
 ```
 # lnxrouter -i eth1 --tp 9040 --dns-proxy 9053

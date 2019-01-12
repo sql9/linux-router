@@ -12,7 +12,7 @@ usage() {
     cat << EOF
 linux-router $VERSION (https://github.com/garywill/linux-router)
 
-Usage: $PROGNAME [options] 
+Usage: $PROGNAME <options>
 
 Options:
     -h, --help              Show this help
@@ -23,7 +23,7 @@ Options:
                             (To create Wifi hotspot use '--ap' instead)
     -n                      Disable Internet sharing
     
-    -g <IP>                 Set this host's IPv4 address, netmask is 24 
+    -g <ip>                 Set this host's IPv4 address, netmask is 24 
                             (default: 192.168.18.1)
     -6                      Enable IPv6 (NAT)
     --p6 <prefix>           Set IPv6 prefix (length 64)
@@ -1331,6 +1331,7 @@ if [[ $NO_DNSMASQ -eq 0 ]]; then
 		#log-dhcp
 		log-facility=/dev/null
 		bogus-priv
+		domain-needed
 	EOF
     # 'log-dhcp' show too much logs. Using '-d' in dnsmasq command shows a proper dhcp log
     # if use '-d', 'log-facility' should = /dev/null
