@@ -178,10 +178,8 @@ Options:
     -n                      Do not provide Internet
     
     -g <ip>                 Set this host's IPv4 address, netmask is 24 
-                            (default: 192.168.18.1)
     -6                      Enable IPv6 (NAT)
     --p6 <prefix>           Set IPv6 prefix (length 64)
-                            (default: fd00:1:1:1:: )
                             
     --dns <ip>|<port>|<ip:port>
                             DNS server's upstream DNS.
@@ -269,7 +267,7 @@ Wifi hotspot:
 ## TODO
 
 - Option to ban private network access
-- Option to randomize MAC, IP, SSID, password
+- Option to randomize MAC
 - Option to redirect all DNS traffic
 
 ## Thanks
